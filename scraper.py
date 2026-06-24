@@ -104,7 +104,8 @@ def get_inventory(session: requests.Session):
 
         new_in_page = 0
         for match in LINK_RE.finditer(page_html):
-            full_url, vtype, make_slug, _slug, year, vid = match.groups()
+            full_url = match.group(0)
+            vtype, make_slug, _slug, year, vid = match.groups()
             if vid in found:
                 continue
             found[vid] = {
