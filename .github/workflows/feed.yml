@@ -1,0 +1,50 @@
+name: Atualizar feed Meta (Thiago Veículos)
+
+# Quando rodar:
+#  - todo dia às 08:00 UTC (= 05:00 no horário de Brasília)
+#  - e também manualmente, pelo botão "Run workflow" na aba Actions
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+# O job precisa poder gravar de volta no repositório (commit do CSV atualizado)
+permissions:
+  contents: write
+
+# Evita duas execuções ao mesmo tempo
+concurrency:
+  group: feed-meta
+  cancel-in-progress: false
+
+jobs:
+  build-feed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Gerar o feed (rodar o scraper)
+        run: python scraper.py
+
+      - name: Publicar o feed se algo mudou
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/catalog_vehicles.csv docs/feed_stats.json docs/index.html
+          if git diff --staged --quiet; then
+            echo "Nada mudou no estoque hoje. Nada pra publicar."
+          else
+            git commit -m "feed: atualização automática $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "Feed atualizado e publicado."
+          fi
