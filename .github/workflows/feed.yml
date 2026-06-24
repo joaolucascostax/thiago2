@@ -36,6 +36,29 @@ jobs:
       - name: Gerar o feed (rodar o scraper)
         run: python scraper.py
 
+      - name: Adicionar coluna id (exigida pela Meta)
+        run: |
+          python - <<'PYEOF'
+          import csv, os
+          path = "docs/catalog_vehicles.csv"
+          if not os.path.exists(path):
+              print("CSV não encontrado, pulando.")
+              exit(0)
+          with open(path, encoding="utf-8", newline="") as f:
+              rows = list(csv.DictReader(f))
+          if not rows or "id" in rows[0]:
+              print("Coluna id já existe ou CSV vazio, nada a fazer.")
+              exit(0)
+          fields = ["id"] + list(rows[0].keys())
+          with open(path, "w", encoding="utf-8", newline="") as f:
+              w = csv.DictWriter(f, fieldnames=fields)
+              w.writeheader()
+              for r in rows:
+                  r["id"] = r.get("vehicle_id", "")
+                  w.writerow(r)
+          print(f"Coluna id adicionada. Total: {len(rows)} veículos.")
+          PYEOF
+
       - name: Publicar o feed se algo mudou
         run: |
           git config user.name  "github-actions[bot]"
