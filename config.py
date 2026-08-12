@@ -13,10 +13,11 @@ os "de-para" que traduzem os termos do site para o que a Meta espera.
 SITE_BASE = "https://thiagoveiculosrv.com.br"
 ESTOQUE_PATH = "/estoque"
 
-# Quantos veículos pedir por página no estoque. O site aceita esse parâmetro,
-# então pedimos um número alto pra puxar tudo em poucas requisições.
-PAGE_SIZE = 60
-MAX_PAGES = 50            # trava de segurança (nunca deve chegar perto disso)
+# Quantos veículos por página. NÃO MEXA: o site só aceita 18. Qualquer outro
+# valor (ex.: 60) faz o servidor redirecionar pra uma página remapeada e o robô
+# acaba pulando veículos. Era esse o motivo do feed não fechar 1:1.
+PAGE_SIZE = 18
+MAX_PAGES = 60            # trava de segurança (nunca deve chegar perto disso)
 
 # Tipos de URL que contam como veículo (o site usa /carros/, /caminhoes/ etc.)
 VEHICLE_PATH_TYPES = (
@@ -58,6 +59,14 @@ DEFAULT_STATE = "USED"     # estoque é seminovo/usado; 0 km vira NEW automatica
 MILEAGE_UNIT = "KM"
 IMAGE_SIZE = "1000x750"    # tamanho normalizado das fotos (Meta exige >= 600px)
 MAX_IMAGES = 10            # quantas fotos por veículo enviar
+                           # (na prática o site só entrega ~5 no HTML; o resto
+                           #  fica atrás do modal "Ver todas as fotos", que é
+                           #  carregado por JavaScript)
+
+# Veículo que sumiu do site continua no feed por N dias marcado como
+# "out of stock", em vez de simplesmente desaparecer. Isso faz a Meta pausar o
+# anúncio na hora sem perder o histórico do item. 0 = desliga.
+DIAS_FORA_DE_ESTOQUE = 3
 
 # Modelo do texto de descrição (gerado a partir dos campos do veículo).
 # Use {make} {model} {version} {year} {km} {color} como variáveis.
@@ -113,7 +122,8 @@ BODY_STYLE_MAP = {
     "conversível": "CONVERTIBLE", "conversivel": "CONVERTIBLE",
     "cupê": "COUPE", "cupe": "COUPE", "coupé": "COUPE", "coupe": "COUPE",
     "perua": "WAGON", "wagon": "WAGON",
-    "street": "OTHER",
+    "street": "OTHER", "naked": "OTHER", "custom": "OTHER",
+    "conversível/cupê": "CONVERTIBLE", "conversivel/cupe": "CONVERTIBLE",
     "carroceria de ferro": "TRUCK", "carroceria de madeira": "TRUCK",
     "caminhão": "TRUCK", "caminhao": "TRUCK", "truck": "TRUCK",
 }

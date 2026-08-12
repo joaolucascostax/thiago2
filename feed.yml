@@ -1,0 +1,79 @@
+name: Atualizar feed Meta (Thiago Veículos)
+
+# Quando roda:
+#  - de 3 em 3 horas (carro vende durante o dia; 1x/dia deixava o feed até 23h
+#    desatualizado em relação ao site)
+#  - e no botão "Run workflow" da aba Actions
+on:
+  schedule:
+    - cron: "0 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: feed-meta
+  cancel-in-progress: false
+
+jobs:
+  build-feed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      # O scraper já grava a coluna "id" e aborta sozinho (exit 1) se o feed
+      # não fechar 1:1 com o site. Se este passo falhar, o CSV publicado
+      # continua sendo o último bom — e o GitHub te manda e-mail avisando.
+      - name: Gerar o feed
+        run: python scraper.py
+
+      - name: Conferir o CSV antes de publicar
+        run: |
+          python - <<'PYEOF'
+          import csv, json, sys
+          rows = list(csv.DictReader(open("docs/catalog_vehicles.csv", encoding="utf-8")))
+          stats = json.load(open("docs/feed_stats.json", encoding="utf-8"))
+          erros = []
+          if len(rows) < 10:
+              erros.append(f"só {len(rows)} linhas no CSV")
+          if not stats["bate_com_o_site"]:
+              erros.append(f"feed {stats['veiculos_listados']} x site {stats['veiculos_no_site']}")
+          ids = [r["id"] for r in rows]
+          if len(ids) != len(set(ids)):
+              erros.append("id repetido no CSV")
+          sem_preco = [r["id"] for r in rows if not r["price"]]
+          if sem_preco:
+              erros.append(f"{len(sem_preco)} sem preço: {sem_preco[:5]}")
+          sem_foto = [r["id"] for r in rows if not r["image[0].url"]]
+          if sem_foto:
+              print(f"aviso: {len(sem_foto)} sem foto: {sem_foto[:5]}")
+          if erros:
+              print("REPROVADO:", "; ".join(erros), file=sys.stderr)
+              sys.exit(1)
+          print(f"OK: {len(rows)} linhas conferidas.")
+          PYEOF
+
+      - name: Publicar o feed se algo mudou
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/catalog_vehicles.csv docs/feed_stats.json \
+                  docs/index.html docs/divergencias.json docs/historico.json
+          if git diff --staged --quiet; then
+            echo "Nada mudou no estoque. Nada pra publicar."
+          else
+            git commit -m "feed: atualização automática $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "Feed atualizado e publicado."
+          fi
