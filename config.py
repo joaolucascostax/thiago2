@@ -65,7 +65,7 @@ MAX_IMAGES = 20            # quantas fotos por veículo enviar (limite da Meta)
 # Veículo que sumiu do site continua no feed por N dias marcado como
 # "out of stock", em vez de simplesmente desaparecer. Isso faz a Meta pausar o
 # anúncio na hora sem perder o histórico do item. 0 = desliga.
-DIAS_FORA_DE_ESTOQUE = 3
+DIAS_FORA_DE_ESTOQUE = 0
 
 # Modelo do texto de descrição (gerado a partir dos campos do veículo).
 # Use {make} {model} {version} {year} {km} {color} como variáveis.
