@@ -58,10 +58,9 @@ CURRENCY = "BRL"
 DEFAULT_STATE = "USED"     # estoque é seminovo/usado; 0 km vira NEW automaticamente
 MILEAGE_UNIT = "KM"
 IMAGE_SIZE = "1000x750"    # tamanho normalizado das fotos (Meta exige >= 600px)
-MAX_IMAGES = 10            # quantas fotos por veículo enviar
-                           # (na prática o site só entrega ~5 no HTML; o resto
-                           #  fica atrás do modal "Ver todas as fotos", que é
-                           #  carregado por JavaScript)
+MAX_IMAGES = 20            # quantas fotos por veículo enviar (limite da Meta)
+                           # As fotos TODAS estão no HTML, num JSON com as
+                           # barras escapadas. Ver extract_images no scraper.
 
 # Veículo que sumiu do site continua no feed por N dias marcado como
 # "out of stock", em vez de simplesmente desaparecer. Isso faz a Meta pausar o

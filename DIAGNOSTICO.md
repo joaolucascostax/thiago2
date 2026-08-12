@@ -132,15 +132,31 @@ Um detalhe que também vale checar com eles: a Ford F-350 (id 1015593) está com
 
 ---
 
-## Limite que continua existindo
+## Fotos: era bug, não limitação do site — RESOLVIDO
 
-**Só dá pra pegar 5 fotos por veículo.** O site entrega 5 no HTML; o resto fica
-atrás do botão "Ver todas as fotos", que carrega por JavaScript. Por isso as
-colunas `image[5]` a `image[9]` estão vazias em 100% das linhas.
+Primeiro achei que só desse pra pegar 5 fotos. Errado. Conferindo a página da
+Hilux SRX 2024 (id 1082255) no console, as fotos **todas** já estão no HTML
+desde o carregamento — nenhuma chamada de rede quando se clica em "Ver todas as
+fotos", o modal só revela o que já estava lá.
 
-Pra resolver de verdade precisaria descobrir o endpoint que o modal chama, ou
-rodar um navegador headless no Actions. Dá pra fazer — me fala se quer que eu
-vá atrás.
+O que a v1 perdia: a galeria completa vem num JSON embutido na página, com as
+URLs originais no S3 e as **barras escapadas**:
+
+```
+https:\/\/autoconf-production.s3.amazonaws.com\/veiculos\/fotos\/1082255\/UUID.jpg
+```
+
+A regex da v1 exigia o host `resized-images.autoconf.com.br` **e** barra
+literal. Não casava com nenhuma dessas. Sobrava só o que estava nas tags `<img>`
+visíveis — 5 fotos de 12.
+
+**Correção:** normalizo `\/` e `\u002F` para `/`, caso só pelo **caminho**
+(`/veiculos/fotos/{id}/UUID.ext`, qualquer host) e reconstruo tudo pelo
+`resized-images` no tamanho do `IMAGE_SIZE`. Como o filtro é pelo id do
+veículo, dá pra varrer a página inteira sem risco de pegar foto das sugestões.
+
+`MAX_IMAGES` subiu de 10 para 20 e o CSV agora tem as colunas `image[0]` a
+`image[19]`.
 
 ---
 
@@ -149,7 +165,7 @@ vá atrás.
 | Arquivo | O que fazer |
 |---|---|
 | `scraper.py` | substituir inteiro |
-| `config.py` | substituir inteiro (`PAGE_SIZE` 60 → 18, `DIAS_FORA_DE_ESTOQUE`, carrocerias novas) |
+| `config.py` | substituir inteiro (`PAGE_SIZE` 60 → 18, `MAX_IMAGES` 10 → 20, `DIAS_FORA_DE_ESTOQUE`, carrocerias novas) |
 | `.github/workflows/feed.yml` | substituir inteiro (roda de 3/3h, confere o CSV, tirei a gambiarra da coluna `id`) |
 | `test_parse.py` | substituir inteiro (o antigo testava um HTML inventado que não parece com o do site — por isso passava enquanto a produção quebrava) |
 

@@ -31,9 +31,16 @@ HTML = f"""<!doctype html><html><head>
 </head><body>
 <div class="galeria">
   <img src="https://resized-images.autoconf.com.br/951x720/filters:format(jpg)/veiculos/fotos/{VID}/509a2520-7791-48e7-ab65-408c9fc99ade.jpg">
-  <img src="https://resized-images.autoconf.com.br/470x354/filters:format(jpg)/veiculos/fotos/{VID}/6973286b-9c65-4889-9d4e-7f43c248363e.jpg">
+  <img src="https://resized-images.autoconf.com.br/470x354/filters:format(webp)/veiculos/fotos/{VID}/6973286b-9c65-4889-9d4e-7f43c248363e.jpg">
   <img src="https://resized-images.autoconf.com.br/470x354/filters:format(jpg)/veiculos/fotos/{VID}/562bb804-eb3a-4a23-a740-37698387aaad.jpg">
 </div>
+<!-- galeria completa: JSON embutido, barras escapadas, host S3 (era o que a v1 perdia) -->
+<script>window.__DATA__={{"fotos":[
+ "https:\\/\\/autoconf-production.s3.amazonaws.com\\/veiculos\\/fotos\\/{VID}\\/509a2520-7791-48e7-ab65-408c9fc99ade.jpg",
+ "https:\\/\\/autoconf-production.s3.amazonaws.com\\/veiculos\\/fotos\\/{VID}\\/11111111-aaaa-bbbb-cccc-000000000001.jpg",
+ "https:\\/\\/autoconf-production.s3.amazonaws.com\\/veiculos\\/fotos\\/{VID}\\/11111111-aaaa-bbbb-cccc-000000000002.jpg",
+ "https:\\/\\/resized-images.autoconf.com.br\\/470x354\\/filters:format(webp)\\/veiculos\\/fotos\\/{VID}\\/11111111-aaaa-bbbb-cccc-000000000003.jpg"
+]}};</script>
 <h2>VolksWagen Gol</h2><h3>Gol (novo) 1.6 Mi Total Flex 8V 4p</h3>
 <div class="preco"><strong>R$ 34.990</strong></div>
 <h4>Ficha t&eacute;cnica</h4>
@@ -97,8 +104,9 @@ def main():
         falhas.append(f"  body_style: esperado 'CONVERTIBLE', veio {v['body_style']!r}")
 
     # as fotos tem que ser todas deste veiculo, na resolucao configurada
-    if len(v["images"]) != 3:
-        falhas.append(f"  images: esperado 3, veio {len(v['images'])}")
+    # 3 da galeria visivel + 3 novas do JSON escapado/S3 = 6 unicas
+    if len(v["images"]) != 6:
+        falhas.append(f"  images: esperado 6, veio {len(v['images'])}")
     for u in v["images"]:
         if f"/veiculos/fotos/{VID}/" not in u:
             falhas.append(f"  foto de outro veiculo no feed: {u}")

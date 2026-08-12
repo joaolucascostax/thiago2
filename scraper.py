@@ -235,23 +235,32 @@ def parse_keywords(meta: dict) -> dict:
     return out
 
 
-FOTO_RE_TMPL = (
-    r"resized-images\.autoconf\.com\.br/[^\"'\s]*?/veiculos/fotos/{vid}/"
-    r"([a-f0-9][a-f0-9\-]+)\.(?:jpe?g|png|webp)"
-)
+# ATENÇÃO: NÃO amarre esta regex ao host resized-images. A galeria completa vem
+# num JSON embutido na página, com as URLs originais no S3
+# (autoconf-production.s3.amazonaws.com) e as barras ESCAPADAS (\/). Era isso que
+# fazia a v1 achar só 5 fotos de 12 — ela exigia o host e a barra literal.
+# Aqui a gente normaliza o escape e casa só pelo CAMINHO, seja qual for o host.
+FOTO_RE_TMPL = r"/veiculos/fotos/{vid}/([a-f0-9][a-f0-9\-]{{19,}})\.(?:jpe?g|png|webp)"
 
 
-def extract_images(main_html: str, meta: dict, vehicle_id: str) -> list[str]:
-    """Fotos DESTE veículo. O site entrega ~5 no HTML; o resto fica atrás do
-    modal 'Ver todas as fotos', carregado por JavaScript."""
+def desescapar(texto: str) -> str:
+    r"""JSON dentro do HTML vem com \/ e às vezes \u002F no lugar de /."""
+    return (texto.replace("\\/", "/")
+                 .replace("\\u002F", "/")
+                 .replace("\\u002f", "/"))
+
+
+def extract_images(page_html: str, meta: dict, vehicle_id: str) -> list[str]:
+    """Todas as fotos DESTE veículo (filtra pelo id, então pode varrer a página
+    inteira sem risco de pegar foto das sugestões)."""
     rx = re.compile(FOTO_RE_TMPL.format(vid=re.escape(vehicle_id)), re.IGNORECASE)
     urls, vistos = [], set()
 
     ordem = []
-    mo = rx.search(meta.get("og:image", ""))   # og:image é a foto de capa
+    mo = rx.search(desescapar(meta.get("og:image", "")))   # capa vem primeiro
     if mo:
         ordem.append(mo.group(1))
-    ordem += rx.findall(main_html)
+    ordem += rx.findall(desescapar(page_html))
 
     for uuid in ordem:
         u = uuid.lower()
@@ -427,7 +436,7 @@ def parse_vehicle(session: requests.Session, listing: dict) -> dict | None:
             else "OTHER")
 
     # --- imagens ------------------------------------------------------------
-    images = extract_images(main_html, meta, listing["vehicle_id"])
+    images = extract_images(page_html, meta, listing["vehicle_id"])
 
     # --- disponibilidade / condição ----------------------------------------
     availability = "in stock"
@@ -472,7 +481,9 @@ META_COLUMNS = [
     "image[0].url", "image[0].tag[0]",
     "image[1].url", "image[2].url", "image[3].url", "image[4].url",
     "image[5].url", "image[6].url", "image[7].url", "image[8].url",
-    "image[9].url",
+    "image[9].url", "image[10].url", "image[11].url", "image[12].url",
+    "image[13].url", "image[14].url", "image[15].url", "image[16].url",
+    "image[17].url", "image[18].url", "image[19].url",
     "custom_label_0", "custom_label_1", "custom_label_2",
     "custom_label_3", "custom_label_4",
 ]
